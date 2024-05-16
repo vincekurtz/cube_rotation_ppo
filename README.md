@@ -28,3 +28,18 @@ Set up pre-commit hooks:
 pre-commit autoupdate
 pre-commit install
 ```
+
+## Usage
+
+Train a simple pendulum swingup policy and save the learned parameters:
+    
+```bash
+python examples/pendulum.py train
+```
+
+Load the saved parameters launch an interactive simulation with the learned
+policy:
+
+```bash
+python examples/pendulum.py test
+```

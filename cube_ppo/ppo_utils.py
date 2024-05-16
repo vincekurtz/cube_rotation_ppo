@@ -144,7 +144,7 @@ def train_ppo(
     if tensorboard_logdir is not None:
         logdir = tensorboard_logdir
     else:
-        logdir = f"/tmp/tops_tensorboard/ppo_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        logdir = f"/tmp/cube_ppo/{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     print(f"Setting up TensorBoard logging in {logdir}...")
 
     writer = SummaryWriter(logdir)
