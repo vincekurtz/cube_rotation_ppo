@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cube_ppo"
+version = "0.0.1"
+description = "Dextrous In-Hand Manipulation with PPO"
+readme = "README.md"
+license = {text="MIT"}
+requires-python = ">=3.8.0"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python",
+]
+dependencies = [
+    "brax>=0.10.3",
+    "flax>=0.8.1",
+    "jax[cuda12_local]>=0.4.24",
+    "jaxlib>=0.4.24",
+    "matplotlib>=3.8.3",
+    "mujoco>=3.1.2",
+    "mujoco-mjx>=3.1.2",
+    "numpy>=1.23.1",
+    "tensorboard>=2.16.1",
+    "black>=23.3.0",
+    "flake8>=6.0.0",
+    "isort>=5.12.0",
+    "pre-commit>=3.3.2",
+    "pyright>=1.1.332",
+    "pytest>=7.4.2",
+]
+
+[tool.black]
+line-length = 80
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+
+[tool.pyright]
+include = ["ambersim"]
+exclude = [
+    "**/__pycache__",
+]
+defineConstant = { DEBUG = true }
+
+reportMissingImports = "warning"
+reportMissingTypeStubs = false
+reportPrivateImportUsage = false
+
+pythonVersion = "3.11"
+pythonPlatform = "Linux"
