@@ -16,7 +16,7 @@
   -->
 
   <compiler angle="radian" meshdir="./meshes/" />
-  <option cone="elliptic" impratio="10" />
+  <option cone="pyramidal" impratio="10" />
   <asset>
     <material name="black" rgba="0.2 0.2 0.2 1" />
     <material name="white" rgba="0.9 0.9 0.9 1" />
