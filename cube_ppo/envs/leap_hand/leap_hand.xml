@@ -21,12 +21,6 @@
     <flag eulerdamp="enable" />
   </option> 
 
-  <custom>
-    <numeric data="15" name="max_contact_points" />
-    <numeric data="15" name="max_geom_paris" />
-  </custom>
-
-
   <asset>
     <material name="black" rgba="0.2 0.2 0.2 1" />
     <material name="white" rgba="0.9 0.9 0.9 1" />
