@@ -39,7 +39,7 @@ def train():
         env=CubeRotationEnv,
         network_wrapper=network_wrapper,
         save_path="/tmp/leap_ppo.pkl",
-        num_timesteps=50_000,
+        num_timesteps=50_000_000,
         num_evals=10,
         reward_scaling=0.1,
         episode_length=200,
