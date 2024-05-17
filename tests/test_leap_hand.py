@@ -31,8 +31,15 @@ def test_model():
     mjx_model = mjx.put_model(mj_model)
     assert isinstance(mjx_model, mjx.Model)
 
-    mjx_data = mjx.put_data(mj_model, mj_data)
+    mjx_data = mjx.make_data(mjx_model)
     assert isinstance(mjx_data, mjx.Data)
+
+    old_qx = mjx_data.qpos.copy()
+    mjx_data = jax.jit(mjx.step)(mjx_model, mjx_data)
+    new_qx = mjx_data.qpos.copy()
+
+    assert np.allclose(old_q, old_qx)
+    assert np.allclose(new_q, new_qx)
 
 
 if __name__ == "__main__":
