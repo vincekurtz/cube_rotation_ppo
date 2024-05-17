@@ -4,6 +4,7 @@ import numpy as np
 from mujoco import mjx
 
 from cube_ppo import ROOT
+from cube_ppo.envs.leap_hand.cube_rotation_env import CubeRotationEnv
 
 
 def test_model():
@@ -42,5 +43,29 @@ def test_model():
     assert np.allclose(new_q, new_qx)
 
 
+def test_env():
+    """Make sure we can create and step the cube rotation environment."""
+    rng = jax.random.PRNGKey(0)
+    env = CubeRotationEnv()
+
+    rng, reset_rng = jax.random.split(rng)
+    state = env.reset(reset_rng)
+    assert state.obs.shape == (32,)
+
+    rng, action_rng = jax.random.split(rng)
+    action = jax.random.uniform(action_rng, (16,))
+    state = env.step(state, action)
+
+    assert state.obs.shape == (32,)
+    assert state.reward.shape == ()
+    assert state.done.shape == ()
+    assert state.metrics["reward"].shape == ()
+
+    assert state.reward < 0.0
+    assert state.reward == state.metrics["reward"]
+    assert state.done == 0.0
+
+
 if __name__ == "__main__":
-    test_model()
+    # test_model()
+    test_env()

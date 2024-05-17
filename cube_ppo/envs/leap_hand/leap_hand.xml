@@ -16,7 +16,17 @@
   -->
 
   <compiler angle="radian" meshdir="./meshes/" />
-  <option cone="pyramidal" impratio="10" />
+
+  <option impratio="10" iterations="10" ls_iterations="4" timestep="0.001">
+    <flag eulerdamp="enable" />
+  </option> 
+
+  <custom>
+    <numeric data="15" name="max_contact_points" />
+    <numeric data="15" name="max_geom_paris" />
+  </custom>
+
+
   <asset>
     <material name="black" rgba="0.2 0.2 0.2 1" />
     <material name="white" rgba="0.9 0.9 0.9 1" />
@@ -220,7 +230,7 @@
               class="visual" mesh="dip" />
             <geom size="0.01 0.008 0.017" pos="0 -0.015 0.0145" class="collision" />
             <geom size="0.017 0.011 0.013" pos="0.0075 -0.035 0.015" class="collision" />
-            <!-- <geom size="0.008 0.003 0.013" pos="0 -0.02 0.015" class="collision" />
+              <!-- <geom size="0.008 0.003 0.013" pos="0 -0.02 0.015" class="collision" />
             <geom size="0.01 0.002 0.017" pos="0 -0.016 0.015" class="collision" />
             <geom size="0.007 0.01 0.002" pos="0 -0.0045 0.03" class="collision" />
             <geom size="0.007 0.01 0.002" pos="0 -0.0045 0" class="collision" />
@@ -233,7 +243,7 @@
               <geom pos="0.0132 -0.0061 0.0145" quat="1.32679e-06 1 0 0" type="mesh"
                 class="visual" mesh="fingertip" />
               <geom size="0.01 0.005 0.017" pos="0 -0.012 0.0145" class="collision" />
-              <!-- <geom size="0.007 0.011 0.002" pos="0 -0.006 0.03" class="collision" />
+                <!-- <geom size="0.007 0.011 0.002" pos="0 -0.006 0.03" class="collision" />
               <geom size="0.007 0.011 0.002" pos="0 -0.006 -0.001" class="collision" /> -->
               <geom type="mesh" mesh="white_tip" class="collision" />
               <geom type="mesh" mesh="white_tip" class="visual" material="white" />
@@ -249,7 +259,7 @@
           mesh="mcp_joint" />
         <geom size="0.01 0.008 0.017" pos="0 0.013 0.0147" class="collision" />
         <geom size="0.014 0.02 0.01" pos="-0.027 0.042 0.015" class="collision" />
-        <!-- <geom size="0.01 0.003 0.017" pos="0 0.018 0.0147" class="collision" />
+          <!-- <geom size="0.01 0.003 0.017" pos="0 0.018 0.0147" class="collision" />
         <geom size="0.014 0.02 0.01" pos="-0.027 0.042 0.015" class="collision" />
         <geom size="0.017 0.003 0.01" pos="-0.0262 0.02 0.0146" class="collision" />
         <geom size="0.01 0.012 0.004" pos="-0.0295 0.035 0.029" class="collision" />
@@ -270,7 +280,7 @@
               class="visual" mesh="dip" />
             <geom size="0.01 0.008 0.017" pos="0 -0.015 0.0145" class="collision" />
             <geom size="0.017 0.011 0.013" pos="0.0075 -0.035 0.015" class="collision" />
-            <!-- <geom size="0.008 0.003 0.013" pos="0 -0.02 0.015" class="collision" />
+              <!-- <geom size="0.008 0.003 0.013" pos="0 -0.02 0.015" class="collision" />
             <geom size="0.01 0.002 0.017" pos="0 -0.016 0.015" class="collision" />
             <geom size="0.007 0.01 0.002" pos="0 -0.0045 0.03" class="collision" />
             <geom size="0.007 0.01 0.002" pos="0 -0.0045 0" class="collision" />
@@ -283,7 +293,7 @@
               <geom pos="0.0132 -0.0061 0.0145" quat="1.32679e-06 1 0 0" type="mesh"
                 class="visual" mesh="fingertip" />
               <geom size="0.01 0.005 0.017" pos="0 -0.012 0.0145" class="collision" />
-              <!-- <geom size="0.007 0.011 0.002" pos="0 -0.006 0.03" class="collision" />
+                <!-- <geom size="0.007 0.011 0.002" pos="0 -0.006 0.03" class="collision" />
               <geom size="0.007 0.011 0.002" pos="0 -0.006 -0.001" class="collision" /> -->
               <geom type="mesh" mesh="white_tip" class="collision" />
               <geom type="mesh" mesh="white_tip" class="visual" material="white" />
@@ -306,8 +316,8 @@
             class="visual" mesh="thumb_pip" />
           <geom size="0.009 0.0165 0.009" pos="0 0 -0.009" class="collision" />
 
-          <!-- UNNEEDED GEOMS -->
-          <!-- <geom size="0.009 0.0165 0.002" pos="0 0 -0.0015" class="collision" />
+            <!-- UNNEEDED GEOMS -->
+            <!-- <geom size="0.009 0.0165 0.002" pos="0 0 -0.0015" class="collision" />
           <geom size="0.007 0.002 0.01" pos="0 -0.015 -0.013" class="collision" />
           <geom size="0.007 0.002 0.01" pos="0 0.015 -0.013" class="collision" /> -->
           <body name="thumb_dip" pos="0 0.0145 -0.017" quat="0.707109 -0.707105 0 0">
@@ -320,9 +330,9 @@
             <geom size="0.01 0.02 0.012" pos="0 0.0105 -0.014" class="collision" />
             <geom size="0.01 0.01 0.016" pos="0 0.041 -0.015" class="collision" />
 
-            <!-- UNNEEDED GEOMS -->
-            <!-- <geom size="0.005 0.012 0.009" pos="-0.0135 0.0175 -0.011656" class="collision" /> -->
-            <!-- <geom size="0.01 0.002 0.016" pos="0 0.031 -0.015" class="collision" />
+              <!-- UNNEEDED GEOMS -->
+              <!-- <geom size="0.005 0.012 0.009" pos="-0.0135 0.0175 -0.011656" class="collision" /> -->
+              <!-- <geom size="0.01 0.002 0.016" pos="0 0.031 -0.015" class="collision" />
             <geom size="0.007 0.01 0.002" pos="0 0.042 0.001" class="collision" />
             <geom size="0.007 0.01 0.002" pos="0 0.042 -0.029" class="collision" /> -->
             <body name="thumb_fingertip" pos="0 0.0466 0.0002" quat="1.32679e-06 0 0 1">
@@ -337,8 +347,8 @@
               <geom type="mesh" mesh="white_tip_thumb" class="collision" />
               <geom type="mesh" mesh="white_tip_thumb" class="visual" material="white" />
 
-              <!-- UNNEEDED GEOMS -->
-              <!-- <geom size="0.004 0.012 0.009" pos="0.015 -0.0175 -0.0115" class="collision" /> -->
+                <!-- UNNEEDED GEOMS -->
+                <!-- <geom size="0.004 0.012 0.009" pos="0.015 -0.0175 -0.0115" class="collision" /> -->
             </body>
           </body>
         </body>

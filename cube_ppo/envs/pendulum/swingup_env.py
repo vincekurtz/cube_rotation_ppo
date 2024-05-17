@@ -19,7 +19,7 @@ class PendulumSwingupConfig:
     # model path: scene.xml contains ground + other niceties in addition to the pendulum
     model_path: Union[Path, str] = ROOT + "/envs/pendulum/scene.xml"
 
-    # number of "simulation steps" for every control input
+    # number of simulation steps for every control input
     physics_steps_per_control_step: int = 1
 
     # the standard deviation of the noise (in radians) to add to the angular observations
