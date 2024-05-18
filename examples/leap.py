@@ -66,6 +66,8 @@ def test():
     # Extract the mujoco system model
     mj_model = env.sys.mj_model
     mj_data = mujoco.MjData(mj_model)
+    mjx_model = mjx.put_model(mj_model)
+    mjx_data = mjx.make_data(mjx_model)
 
     # Load the trained policy
     with open("/tmp/leap_ppo.pkl", "rb") as f:
@@ -82,6 +84,7 @@ def test():
         normalize_observations=True,
     )
     jit_policy = jax.jit(policy)
+    jit_obs = jax.jit(env._compute_obs)
 
     # Start an interactive simulation
     rng = jax.random.PRNGKey(0)
@@ -92,7 +95,8 @@ def test():
             act_rng, rng = jax.random.split(rng)
 
             # Get an observation from the environment
-            obs = env._compute_obs(mjx.put_data(mj_model, mj_data), {})
+            mjx_data = mjx_data.replace(qpos=mj_data.qpos, qvel=mj_data.qvel)
+            obs = jit_obs(mjx_data, {})
 
             # Get an action from the policy
             act, _ = jit_policy(obs, act_rng)
