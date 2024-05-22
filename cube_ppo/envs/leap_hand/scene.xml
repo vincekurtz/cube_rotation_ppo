@@ -1,4 +1,13 @@
 <mujoco model="cube_rotation_task">
+  
+  <option impratio="10" iterations="1" ls_iterations="4" timestep="0.01" >
+    <flag eulerdamp="disable" />
+  </option>
+
+  <!-- Not very realistic contact parameters, but allows for big timesteps -->
+  <default>
+    <geom solimp="0.0 0.95 0.01" solref="0.02 1"/>
+  </default>
 
   <!-- The scene, including cameras and a floor -->
   <asset>
@@ -25,11 +34,12 @@
   <include file="leap_hand.xml" />
 
   <!-- The cube -->
-  <!-- TODO -->
+  <include file="reorientation_cube.xml" />
 
   <!-- Default joint positions -->
   <keyframe>
-    <key name="home" qpos="0.5 -0.75 0.75 0.25 0.5 0 0.75 0.25 0.5 0.75 0.75 0.25 0.65 0.9 0.75 0.6" />
+    <key name="home"
+      qpos="0.15 0.025 0.075 1 0 0 0 0.5 -0.75 0.75 0.25 0.5 0 0.75 0.25 0.5 0.75 0.75 0.25 0.65 0.9 0.75 0.6" />
   </keyframe>
 
 </mujoco>

@@ -56,8 +56,10 @@ class CubeRotationEnv(PipelineEnv):
         mj_model = mujoco.MjModel.from_xml_path(config.model_path)
         sys = mjcf.load_model(mj_model)
 
-        self.q_grasp = jnp.array(mj_model.keyframe("home").qpos)
+        self.q_grasp = jnp.array(mj_model.keyframe("home").qpos[7:])
         self.v_grasp = jnp.zeros_like(self.q_grasp)
+        self.q_cube = jnp.array(mj_model.keyframe("home").qpos[:7])
+        self.v_cube = jnp.zeros(6)
 
         super().__init__(
             sys, n_frames=config.physics_steps_per_control_step, backend="mjx"
@@ -80,13 +82,15 @@ class CubeRotationEnv(PipelineEnv):
 
         # Set a random cube state just above the hand
         # TODO
+        q_cube = self.q_cube
+        v_cube = self.v_cube
 
         # Set a random cube target
         # TODO
 
         # Set the simulator state
-        qpos = q_hand  # TODO: add the cube state
-        qvel = v_hand
+        qpos = jnp.concatenate([q_cube, q_hand])
+        qvel = jnp.concatenate([v_cube, v_hand])
         data = self.pipeline_init(qpos, qvel)
 
         # Set other brax state fields (observation, reward, metrics, etc)
@@ -130,8 +134,8 @@ class CubeRotationEnv(PipelineEnv):
         self, data: mjx.Data, info: Dict[str, Any]
     ) -> jnp.ndarray:
         """Compute the reward from the simulator state."""
-        q = data.qpos
-        v = data.qvel
+        q = data.qpos[7:]
+        v = data.qvel[6:]
 
         grasp_cost = jnp.sum(jnp.square(q - self.q_grasp))
         joint_vel_cost = jnp.sum(jnp.square(v))
