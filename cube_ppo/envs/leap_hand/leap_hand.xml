@@ -17,7 +17,7 @@
 
   <compiler angle="radian" meshdir="./meshes/" />
 
-  <option impratio="10" iterations="1" ls_iterations="4" timestep="0.001" >
+  <option impratio="10" iterations="1" ls_iterations="4" timestep="0.01" >
     <flag eulerdamp="disable" />
   </option>
 
@@ -43,8 +43,8 @@
   </asset>
   <default>
     <position kp="1.0" kv="0.0" forcerange="-1 1" />
-    <joint damping="0.05" armature="0.0002" />
-    <geom solimp="0.5 0.99 0.0001" solref="0.005 1"/>
+    <joint damping="0.05" armature="0.001" />
+    <geom solimp="0.5 0.99 0.01"/>
 
     <default class="visual">
       <geom group="2" type="mesh" contype="0" conaffinity="0" density="0" material="black" />
