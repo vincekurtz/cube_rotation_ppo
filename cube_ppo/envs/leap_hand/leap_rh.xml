@@ -5,10 +5,10 @@ Adopted from https://github.com/alberthli/mujoco_mpc/blob/leap-hardware/mjpc/tas
 
 <mujoco model="leap_rh">
   <compiler angle="radian" meshdir="./meshes" />
-  <option timestep="0.01"
+  <option timestep="0.005"
     integrator="implicitfast"
     impratio="0.1"
-    iterations="4"
+    iterations="5"
     ls_iterations="10"
   >
     <flag eulerdamp="disable" />

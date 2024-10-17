@@ -80,20 +80,29 @@ class CubeRotationEnv(PipelineEnv):
             vel_rng, (16,)
         )
 
-        # Set a random cube state just above the hand
-        # TODO
+        # Set the cube to start just above the hand
+        # TODO: consider randomizing this
         q_cube = jnp.array([0.11, 0.0, 0.1, 1.0, 0.0, 0.0, 0.0])
         v_cube = jnp.zeros(6)
 
         # Set a random cube target orientation
-        # TODO
-        target_quat = jnp.array([1.0, 0.0, 0.0, 0.0])
+        # https://stackoverflow.com/questions/31600717/
+        rng, goal_rng = jax.random.split(rng)
+        u, v, w = jax.random.uniform(goal_rng, (3,))
+        goal_quat = jnp.array(
+            [
+                jnp.sqrt(1 - u) * jnp.sin(2 * jnp.pi * v),
+                jnp.sqrt(1 - u) * jnp.cos(2 * jnp.pi * v),
+                jnp.sqrt(u) * jnp.sin(2 * jnp.pi * w),
+                jnp.sqrt(u) * jnp.cos(2 * jnp.pi * w),
+            ]
+        )
 
         # Set the simulator state
         qpos = jnp.concatenate([q_hand, q_cube])
         qvel = jnp.concatenate([v_hand, v_cube])
         data = self.pipeline_init(qpos, qvel)
-        data = data.tree_replace({"mocap_quat": target_quat[None]})
+        data = data.tree_replace({"mocap_quat": goal_quat[None]})
 
         # Set other brax state fields (observation, reward, metrics, etc)
         obs = self._compute_obs(data, {})
