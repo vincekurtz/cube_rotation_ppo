@@ -9,24 +9,24 @@ from cube_ppo.envs.leap_hand.cube_rotation_env import CubeRotationEnv
 
 def test_model():
     """Make sure we can load the hand into mujoco and mjx."""
-    model_file = ROOT + "/envs/leap_hand/leap_hand.xml"
+    model_file = ROOT + "/envs/leap_hand/scene.xml"
 
     # Test the mujoco model
     mj_model = mujoco.MjModel.from_xml_path(model_file)
     mj_data = mujoco.MjData(mj_model)
 
-    assert mj_model.nq == 16
-    assert mj_model.nv == 16
+    assert mj_model.nq == 23
+    assert mj_model.nv == 22
     assert mj_model.nu == 16
-    assert mj_data.qpos.shape == (16,)
-    assert mj_data.qvel.shape == (16,)
+    assert mj_data.qpos.shape == (23,)
+    assert mj_data.qvel.shape == (22,)
     assert mj_data.ctrl.shape == (16,)
 
     old_q = mj_data.qpos.copy()
     mujoco.mj_step(mj_model, mj_data)
     new_q = mj_data.qpos.copy()
 
-    assert np.all(old_q != new_q)
+    assert not np.all(old_q == new_q)
 
     # Test translating it to mjx
     mjx_model = mjx.put_model(mj_model)
@@ -48,15 +48,17 @@ def test_env():
     rng = jax.random.PRNGKey(0)
     env = CubeRotationEnv()
 
+    assert env.grasp_site_id != -1
+
     rng, reset_rng = jax.random.split(rng)
     state = env.reset(reset_rng)
-    assert state.obs.shape == (32,)
+    assert state.obs.shape == (45,)
 
     rng, action_rng = jax.random.split(rng)
     action = jax.random.uniform(action_rng, (16,))
     state = env.step(state, action)
 
-    assert state.obs.shape == (32,)
+    assert state.obs.shape == (45,)
     assert state.reward.shape == ()
     assert state.done.shape == ()
     assert state.metrics["reward"].shape == ()

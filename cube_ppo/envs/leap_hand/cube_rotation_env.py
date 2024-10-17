@@ -56,10 +56,17 @@ class CubeRotationEnv(PipelineEnv):
         mj_model = mujoco.MjModel.from_xml_path(config.model_path)
         sys = mjcf.load_model(mj_model)
 
+        # Home positions for the hand and cube
         self.q_grasp = jnp.array(mj_model.keyframe("home").qpos[7:])
         self.v_grasp = jnp.zeros_like(self.q_grasp)
         self.q_cube = jnp.array(mj_model.keyframe("home").qpos[:7])
         self.v_cube = jnp.zeros(6)
+
+        # Target position for the cube
+        self.grasp_site_id = mujoco.mj_name2id(
+            mj_model, mujoco.mjtObj.mjOBJ_SITE.value, "grasp_site"
+        )
+        assert self.grasp_site_id != -1, "grasp_site not found in model."
 
         super().__init__(
             sys, n_frames=config.physics_steps_per_control_step, backend="mjx"
@@ -105,7 +112,8 @@ class CubeRotationEnv(PipelineEnv):
         rng, rng_obs = jax.random.split(state.info["rng"])
 
         # Apply the action
-        data = self.pipeline_step(state.pipeline_state, action)
+        # data = self.pipeline_step(state.pipeline_state, action)
+        data = state.pipeline_state
 
         # Compute the observation
         obs = self._compute_obs(data, state.info)
@@ -134,11 +142,18 @@ class CubeRotationEnv(PipelineEnv):
         self, data: mjx.Data, info: Dict[str, Any]
     ) -> jnp.ndarray:
         """Compute the reward from the simulator state."""
+        # Hand joint positions and velocities
         q = data.qpos[7:]
         v = data.qvel[6:]
-
         grasp_cost = jnp.sum(jnp.square(q - self.q_grasp))
         joint_vel_cost = jnp.sum(jnp.square(v))
+
+        # Cube position
+        # cube_pos = q[:3]
+        # cube_target = data.site_xpos[self.grasp_site_id]
+        # print(cube_pos)
+        # print(cube_target)
+        # breakpoint()
 
         total_reward = (
             -self.config.grasp_weight * grasp_cost
