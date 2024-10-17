@@ -1,15 +1,25 @@
-<mujoco model="cube_rotation_task">
-  
-  <option impratio="10" iterations="1" ls_iterations="4" timestep="0.01" >
-    <flag eulerdamp="disable" />
-  </option>
+<mujoco model="leap_scene">
+  <!-- Model that includes the leap hand the cube, and other scene details. -->
+  <include file="leap_rh.xml" />
+  <include file="reorientation_cube.xml" />
 
-  <!-- Not very realistic contact parameters, but allows for big timesteps -->
-  <default>
-    <geom solimp="0.0 0.95 0.01" solref="0.02 1"/>
-  </default>
+  <!-- Target cube -->
+  <worldbody>
+    <body name="goal" mocap="true" pos="0.325 0.17 0.0475">
+      <geom type="box" size=".035 .035 .035" mass=".108" material="cube" contype="0" conaffinity="0" />
+    </body>
+  </worldbody>
 
-  <!-- The scene, including cameras and a floor -->
+  <!-- Viewpoint and other visual features -->
+  <statistic extent="0.4" center="0.3 0.1 0" />
+  <visual>
+    <quality shadowsize="8192" />
+    <global azimuth="180" elevation="-30" offheight="376" offwidth="672" fovy="70" />
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0" />
+    <rgba haze="0.15 0.25 0.35 1" />
+  </visual>
+
+  <!-- Scene assets -->
   <asset>
     <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512"
       height="3072" />
@@ -19,27 +29,17 @@
     <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5"
       reflectance="0.2" />
   </asset>
+
+  <!-- Ground and light -->
   <worldbody>
-    <light pos="0 -0.1 0.5" dir="0 0.2 -1" diffuse="0.7 0.7 0.7" specular="0.3 0.3 0.3"
-      directional="true" castshadow="true" />
-    <geom name="floor" pos="0 0 -0.25" size="0 0 0.05" type="plane" material="groundplane" />
+    <light pos="0 0 3" dir="0 0 -1" directional="false" />
+    <geom name="floor" pos="0 0 -0.25" size="0 0 .125" type="plane" material="groundplane" />
   </worldbody>
-  <statistic extent="0.4" center="0.3 0.1 0" />
-  <visual>
-    <quality shadowsize="8192" />
-    <global azimuth="180" elevation="-30" />
-  </visual>
 
-  <!-- The LEAP hand-->
-  <include file="leap_hand.xml" />
-
-  <!-- The cube -->
-  <include file="reorientation_cube.xml" />
-
-  <!-- Default joint positions -->
-  <keyframe>
-    <key name="home"
-      qpos="0.15 0.025 0.075 1 0 0 0 0.5 -0.75 0.75 0.25 0.5 0 0.75 0.25 0.5 0.75 0.75 0.25 0.65 0.9 0.75 0.6" />
-  </keyframe>
+  <!-- Sensors for the cube -->
+  <sensor>
+    <framepos name="cube_position" objtype="body" objname="cube" reftype="site" refname="grasp_site" />
+    <framequat name="cube_orientation" objtype="body" objname="cube" />
+  </sensor>
 
 </mujoco>
