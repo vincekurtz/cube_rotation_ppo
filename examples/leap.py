@@ -30,7 +30,7 @@ def train():
         policy_network=MLP(
             layer_sizes=(64, 64, 32)
         ),  # action + log probability
-        value_network=MLP(layer_sizes=(128, 128, 128, 1)),
+        value_network=MLP(layer_sizes=(128, 128, 1)),
         action_distribution=NormalTanhDistribution,
     )
 

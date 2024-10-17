@@ -29,12 +29,13 @@ class CubeRotationConfig:
     stdev_obs: float = 0.0
 
     # Cost weights
-    cube_position_weight: float = 0.0
-    cube_orientation_weight: float = 0.0
-    cube_velocity_weight: float = 0.0
-    grasp_weight: float = 1.0
-    joint_velocity_weight: float = 0.0
-    acutation_weight: float = 0.0
+    grasp_weight: float = 0.001
+    position_centering_weight: float = 0.1
+    position_barrier_weight: float = 100
+    oritintation_weight: float = 1.0
+
+    # Distance (m) beyond which we impose a high cube position cost
+    position_radius = 0.015
 
 
 class CubeRotationEnv(PipelineEnv):
@@ -56,17 +57,13 @@ class CubeRotationEnv(PipelineEnv):
         mj_model = mujoco.MjModel.from_xml_path(config.model_path)
         sys = mjcf.load_model(mj_model)
 
-        # Home positions for the hand and cube
-        self.q_grasp = jnp.array(mj_model.keyframe("home").qpos[7:])
-        self.v_grasp = jnp.zeros_like(self.q_grasp)
-        self.q_cube = jnp.array(mj_model.keyframe("home").qpos[:7])
-        self.v_cube = jnp.zeros(6)
-
-        # Target position for the cube
-        self.grasp_site_id = mujoco.mj_name2id(
-            mj_model, mujoco.mjtObj.mjOBJ_SITE.value, "grasp_site"
+        # Get sensor ids
+        self.cube_position_sensor = mujoco.mj_name2id(
+            mj_model, mujoco.mjtObj.mjOBJ_SENSOR, "cube_position"
         )
-        assert self.grasp_site_id != -1, "grasp_site not found in model."
+        self.cube_orientation_sensor = mujoco.mj_name2id(
+            mj_model, mujoco.mjtObj.mjOBJ_SENSOR, "cube_orientation"
+        )
 
         super().__init__(
             sys, n_frames=config.physics_steps_per_control_step, backend="mjx"
@@ -76,29 +73,27 @@ class CubeRotationEnv(PipelineEnv):
         """Resets the environment to an initial state."""
         # Set the hand to near the home position
         rng, pos_rng, vel_rng = jax.random.split(rng, 3)
-        q_hand = (
-            self.q_grasp
-            + self.config.joint_position_noise_scale
-            * jax.random.normal(pos_rng, (16,))
+        q_hand = self.config.joint_position_noise_scale * jax.random.normal(
+            pos_rng, (16,)
         )
-        v_hand = (
-            self.v_grasp
-            + self.config.joint_velocity_noise_scale
-            * jax.random.normal(vel_rng, (16,))
+        v_hand = self.config.joint_velocity_noise_scale * jax.random.normal(
+            vel_rng, (16,)
         )
 
         # Set a random cube state just above the hand
         # TODO
-        q_cube = self.q_cube
-        v_cube = self.v_cube
+        q_cube = jnp.array([0.11, 0.0, 0.1, 1.0, 0.0, 0.0, 0.0])
+        v_cube = jnp.zeros(6)
 
-        # Set a random cube target
+        # Set a random cube target orientation
         # TODO
+        target_quat = jnp.array([1.0, 0.0, 0.0, 0.0])
 
         # Set the simulator state
-        qpos = jnp.concatenate([q_cube, q_hand])
-        qvel = jnp.concatenate([v_cube, v_hand])
+        qpos = jnp.concatenate([q_hand, q_cube])
+        qvel = jnp.concatenate([v_hand, v_cube])
         data = self.pipeline_init(qpos, qvel)
+        data = data.tree_replace({"mocap_quat": target_quat[None]})
 
         # Set other brax state fields (observation, reward, metrics, etc)
         obs = self._compute_obs(data, {})
@@ -112,8 +107,7 @@ class CubeRotationEnv(PipelineEnv):
         rng, rng_obs = jax.random.split(state.info["rng"])
 
         # Apply the action
-        # data = self.pipeline_step(state.pipeline_state, action)
-        data = state.pipeline_state
+        data = self.pipeline_step(state.pipeline_state, action)
 
         # Compute the observation
         obs = self._compute_obs(data, state.info)
@@ -131,32 +125,44 @@ class CubeRotationEnv(PipelineEnv):
         state.metrics["reward"] = reward
         return state.replace(pipeline_state=data, obs=obs, reward=reward)
 
+    def _get_cube_position_err(self, data: mjx.Data) -> jax.Array:
+        """Position of the cube relative to the target grasp position."""
+        sensor_adr = self.sys.sensor_adr[self.cube_position_sensor]
+        return data.sensordata[sensor_adr : sensor_adr + 3]
+
+    def _get_cube_orientation_err(self, data: mjx.Data) -> jax.Array:
+        """Orientation of the cube relative to the target grasp orientation."""
+        sensor_adr = self.sys.sensor_adr[self.cube_orientation_sensor]
+        cube_quat = data.sensordata[sensor_adr : sensor_adr + 4]
+
+        # N.B. we could define a sensor relative to the goal cube, but it looks
+        # like mocap states are not fully implemented yet in MJX, so we'll do
+        # this manually for now.
+        goal_quat = data.mocap_quat[0]
+        return mjx._src.math.quat_sub(cube_quat, goal_quat)
+
     def _compute_obs(self, data: mjx.Data, info: Dict[str, Any]) -> jnp.ndarray:
         """Compute the observation from the simulator state."""
-        # TODO: include the target orientation.
-        q = data.qpos
-        v = data.qvel
-        return jnp.concatenate([q, v])
+        # Hand joint positions and velocities
+        q_hand = data.qpos[:16]
+        v_hand = data.qvel[:16]
+
+        # Cube position and orientation errors
+        cube_pos_err = self._get_cube_position_err(data)
+        cube_ori_err = self._get_cube_orientation_err(data)
+
+        # TODO: consider a sensor on cube velocities
+
+        return jnp.concatenate([q_hand, v_hand, cube_pos_err, cube_ori_err])
 
     def _compute_reward(
         self, data: mjx.Data, info: Dict[str, Any]
     ) -> jnp.ndarray:
         """Compute the reward from the simulator state."""
-        # Hand joint positions and velocities
-        q = data.qpos[7:]
-        v = data.qvel[6:]
-        grasp_cost = jnp.sum(jnp.square(q - self.q_grasp))
-        joint_vel_cost = jnp.sum(jnp.square(v))
+        # Distance from a nominal grasp position
+        grasp_cost = jnp.sum(jnp.square(data.ctrl))  # ctrl = target position
 
-        # Cube position
-        # cube_pos = q[:3]
-        # cube_target = data.site_xpos[self.grasp_site_id]
-        # print(cube_pos)
-        # print(cube_target)
-        # breakpoint()
+        # TODO: add other costs
 
-        total_reward = (
-            -self.config.grasp_weight * grasp_cost
-            - self.config.joint_velocity_weight * joint_vel_cost
-        )
+        total_reward = -self.config.grasp_weight * grasp_cost
         return total_reward

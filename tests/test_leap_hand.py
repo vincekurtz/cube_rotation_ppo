@@ -48,26 +48,26 @@ def test_env():
     rng = jax.random.PRNGKey(0)
     env = CubeRotationEnv()
 
-    assert env.grasp_site_id != -1
+    assert env.cube_position_sensor != -1
+    assert env.cube_orientation_sensor != -1
 
     rng, reset_rng = jax.random.split(rng)
     state = env.reset(reset_rng)
-    assert state.obs.shape == (45,)
+    assert state.obs.shape == (38,)
 
     rng, action_rng = jax.random.split(rng)
     action = jax.random.uniform(action_rng, (16,))
     state = env.step(state, action)
 
-    assert state.obs.shape == (45,)
+    assert state.obs.shape == (38,)
     assert state.reward.shape == ()
     assert state.done.shape == ()
     assert state.metrics["reward"].shape == ()
 
     assert state.reward < 0.0
     assert state.reward == state.metrics["reward"]
-    assert state.done == 0.0
 
 
 if __name__ == "__main__":
-    # test_model()
+    test_model()
     test_env()
