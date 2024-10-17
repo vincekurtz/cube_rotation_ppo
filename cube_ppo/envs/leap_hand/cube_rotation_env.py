@@ -32,7 +32,7 @@ class CubeRotationConfig:
     grasp_weight: float = 0.001
     position_centering_weight: float = 0.1
     position_barrier_weight: float = 100
-    oritintation_weight: float = 1.0
+    orientation_weight: float = 1.0
 
     # Distance (m) beyond which we impose a high cube position cost
     position_radius = 0.015
@@ -107,6 +107,7 @@ class CubeRotationEnv(PipelineEnv):
         rng, rng_obs = jax.random.split(state.info["rng"])
 
         # Apply the action
+        # TODO: scale actions from [-1, 1] to joint limits
         data = self.pipeline_step(state.pipeline_state, action)
 
         # Compute the observation
@@ -162,7 +163,23 @@ class CubeRotationEnv(PipelineEnv):
         # Distance from a nominal grasp position
         grasp_cost = jnp.sum(jnp.square(data.ctrl))  # ctrl = target position
 
-        # TODO: add other costs
+        # Cube position penalties
+        cube_squared_dist = jnp.sum(
+            jnp.square(self._get_cube_position_err(data))
+        )
+        cube_position_cost = jnp.maximum(
+            cube_squared_dist - self.config.position_radius**2, 0
+        )
 
-        total_reward = -self.config.grasp_weight * grasp_cost
+        # Cube orientation cost
+        cube_orientation_cost = jnp.sum(
+            jnp.square(self._get_cube_orientation_err(data))
+        )
+
+        total_reward = (
+            -self.config.grasp_weight * grasp_cost
+            - self.config.position_centering_weight * cube_squared_dist
+            - self.config.position_barrier_weight * cube_position_cost
+            - self.config.orientation_weight * cube_orientation_cost
+        )
         return total_reward

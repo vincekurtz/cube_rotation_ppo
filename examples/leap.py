@@ -95,7 +95,12 @@ def test():
             act_rng, rng = jax.random.split(rng)
 
             # Get an observation from the environment
-            mjx_data = mjx_data.replace(qpos=mj_data.qpos, qvel=mj_data.qvel)
+            mjx_data = mjx_data.replace(
+                qpos=mj_data.qpos,
+                qvel=mj_data.qvel,
+                sensordata=mj_data.sensordata,
+                mocap_quat=mj_data.mocap_quat,
+            )
             obs = jit_obs(mjx_data, {})
 
             # Get an action from the policy
