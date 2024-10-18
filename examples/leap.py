@@ -79,7 +79,7 @@ def test():
     policy = make_policy_function(
         network_wrapper=network_wrapper,
         params=params,
-        observation_size=38,
+        observation_size=44,
         action_size=16,
         normalize_observations=True,
     )
@@ -105,6 +105,11 @@ def test():
 
             # Get an action from the policy
             act, _ = jit_policy(obs, act_rng)
+
+            # Scale the raw action from [-1, 1] to the joint limits
+            u_min = mj_model.actuator_ctrlrange[:, 0]
+            u_max = mj_model.actuator_ctrlrange[:, 1]
+            act = (act + 1.0) / 2.0 * (u_max - u_min) + u_min
 
             # Apply the policy and step the simulation
             mj_data.ctrl[:] = np.array(act)

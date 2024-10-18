@@ -50,16 +50,18 @@ def test_env():
 
     assert env.cube_position_sensor != -1
     assert env.cube_orientation_sensor != -1
+    assert env.cube_linvel_sensor != -1
+    assert env.cube_angvel_sensor != -1
 
     rng, reset_rng = jax.random.split(rng)
     state = env.reset(reset_rng)
-    assert state.obs.shape == (38,)
+    assert state.obs.shape == (44,)
 
     rng, action_rng = jax.random.split(rng)
     action = jax.random.uniform(action_rng, (16,))
     state = env.step(state, action)
 
-    assert state.obs.shape == (38,)
+    assert state.obs.shape == (44,)
     assert state.reward.shape == ()
     assert state.done.shape == ()
     assert state.metrics["reward"].shape == ()
@@ -69,5 +71,5 @@ def test_env():
 
 
 if __name__ == "__main__":
-    test_model()
+    # test_model()
     test_env()

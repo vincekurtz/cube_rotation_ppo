@@ -26,7 +26,7 @@ class CubeRotationConfig:
     joint_velocity_noise_scale: float = 0.1
 
     # Observation noise scales
-    stdev_obs: float = 0.0
+    stdev_obs: float = 0.005
 
     # Cost weights
     grasp_weight: float = 0.001
@@ -64,6 +64,12 @@ class CubeRotationEnv(PipelineEnv):
         self.cube_orientation_sensor = mujoco.mj_name2id(
             mj_model, mujoco.mjtObj.mjOBJ_SENSOR, "cube_orientation"
         )
+        self.cube_linvel_sensor = mujoco.mj_name2id(
+            mj_model, mujoco.mjtObj.mjOBJ_SENSOR, "cube_linvel"
+        )
+        self.cube_angvel_sensor = mujoco.mj_name2id(
+            mj_model, mujoco.mjtObj.mjOBJ_SENSOR, "cube_angvel"
+        )
 
         super().__init__(
             sys, n_frames=config.physics_steps_per_control_step, backend="mjx"
@@ -81,8 +87,12 @@ class CubeRotationEnv(PipelineEnv):
         )
 
         # Set the cube to start just above the hand
-        # TODO: consider randomizing this
-        q_cube = jnp.array([0.11, 0.0, 0.1, 1.0, 0.0, 0.0, 0.0])
+        rng, subrng = jax.random.split(rng)
+        start_pos = jnp.array([0.11, 0.0, 0.1]) + jax.random.uniform(
+            subrng, (3,), minval=-0.02, maxval=0.02
+        )
+        start_quat = jnp.array([1.0, 0.0, 0.0, 0.0])  # TODO: randomize
+        q_cube = jnp.array([*start_pos, *start_quat])
         v_cube = jnp.zeros(6)
 
         # Set a random cube target orientation
@@ -120,8 +130,12 @@ class CubeRotationEnv(PipelineEnv):
         """Run one timestep of the environment's dynamics."""
         rng, rng_obs = jax.random.split(state.info["rng"])
 
+        # Scale actions from [-1, 1] to joint limits
+        u_min = self.sys.actuator_ctrlrange[:, 0]
+        u_max = self.sys.actuator_ctrlrange[:, 1]
+        action = (action + 1.0) / 2.0 * (u_max - u_min) + u_min
+
         # Apply the action
-        # TODO: scale actions from [-1, 1] to joint limits
         data = self.pipeline_step(state.pipeline_state, action)
 
         # Compute the observation
@@ -156,12 +170,18 @@ class CubeRotationEnv(PipelineEnv):
         """Orientation of the cube relative to the target grasp orientation."""
         sensor_adr = self.sys.sensor_adr[self.cube_orientation_sensor]
         cube_quat = data.sensordata[sensor_adr : sensor_adr + 4]
-
-        # N.B. we could define a sensor relative to the goal cube, but it looks
-        # like mocap states are not fully implemented yet in MJX, so we'll do
-        # this manually for now.
         goal_quat = data.mocap_quat[0]
         return mjx._src.math.quat_sub(cube_quat, goal_quat)
+
+    def _get_cube_linvel(self, data: mjx.Data) -> jax.Array:
+        """Linear velocity of the cube."""
+        sensor_adr = self.sys.sensor_adr[self.cube_linvel_sensor]
+        return data.sensordata[sensor_adr : sensor_adr + 3]
+
+    def _get_cube_angvel(self, data: mjx.Data) -> jax.Array:
+        """Angular velocity of the cube."""
+        sensor_adr = self.sys.sensor_adr[self.cube_angvel_sensor]
+        return data.sensordata[sensor_adr : sensor_adr + 3]
 
     def _compute_obs(self, data: mjx.Data, info: Dict[str, Any]) -> jnp.ndarray:
         """Compute the observation from the simulator state."""
@@ -173,9 +193,20 @@ class CubeRotationEnv(PipelineEnv):
         cube_pos_err = self._get_cube_position_err(data)
         cube_ori_err = self._get_cube_orientation_err(data)
 
-        # TODO: consider a sensor on cube velocities
+        # Cube velocities (in the world frame)
+        cube_linvel = self._get_cube_linvel(data)
+        cube_angvel = self._get_cube_angvel(data)
 
-        return jnp.concatenate([q_hand, v_hand, cube_pos_err, cube_ori_err])
+        return jnp.concatenate(
+            [
+                q_hand,
+                v_hand,
+                cube_pos_err,
+                cube_ori_err,
+                cube_linvel,
+                cube_angvel,
+            ]
+        )
 
     def _compute_reward(
         self, data: mjx.Data, info: Dict[str, Any]
