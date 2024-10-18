@@ -30,8 +30,12 @@ class CubeRotationConfig:
 
     # Cost weights
     grasp_weight: float = 0.001
-    position_weight: float = 1.0
-    orientation_weight: float = 10.0
+    position_weight: float = 100.0
+    orientation_weight: float = 1.0
+
+    # Distance from the target position above which we impose a position
+    # penalty
+    position_threshold: float = 0.015
 
 
 class CubeRotationEnv(PipelineEnv):
@@ -83,26 +87,18 @@ class CubeRotationEnv(PipelineEnv):
         )
 
         # Set the cube to start just above the hand
-        rng, subrng = jax.random.split(rng)
+        rng, p_rng, quat_rng = jax.random.split(rng, 3)
         start_pos = jnp.array([0.11, 0.0, 0.1]) + jax.random.uniform(
-            subrng, (3,), minval=-0.02, maxval=0.02
+            p_rng, (3,), minval=-0.02, maxval=0.02
         )
-        start_quat = jnp.array([1.0, 0.0, 0.0, 0.0])  # TODO: randomize
+        start_quat = self._sample_quaternion(quat_rng)
         q_cube = jnp.array([*start_pos, *start_quat])
         v_cube = jnp.zeros(6)
 
         # Set a random cube target orientation
         # https://stackoverflow.com/questions/31600717/
         rng, goal_rng = jax.random.split(rng)
-        u, v, w = jax.random.uniform(goal_rng, (3,))
-        goal_quat = jnp.array(
-            [
-                jnp.sqrt(1 - u) * jnp.sin(2 * jnp.pi * v),
-                jnp.sqrt(1 - u) * jnp.cos(2 * jnp.pi * v),
-                jnp.sqrt(u) * jnp.sin(2 * jnp.pi * w),
-                jnp.sqrt(u) * jnp.cos(2 * jnp.pi * w),
-            ]
-        )
+        goal_quat = self._sample_quaternion(goal_rng)
 
         # Set the simulator state
         qpos = jnp.concatenate([q_hand, q_cube])
@@ -156,6 +152,19 @@ class CubeRotationEnv(PipelineEnv):
             reward=reward,
             done=done,
             metrics=metrics,
+        )
+
+    def _sample_quaternion(self, rng: jax.random.PRNGKey) -> jax.Array:
+        """Sample a random quaternion."""
+        # See https://stackoverflow.com/questions/31600717/
+        u, v, w = jax.random.uniform(rng, (3,))
+        return jnp.array(
+            [
+                jnp.sqrt(1 - u) * jnp.sin(2 * jnp.pi * v),
+                jnp.sqrt(1 - u) * jnp.cos(2 * jnp.pi * v),
+                jnp.sqrt(u) * jnp.sin(2 * jnp.pi * w),
+                jnp.sqrt(u) * jnp.cos(2 * jnp.pi * w),
+            ]
         )
 
     def _get_cube_position_err(self, data: mjx.Data) -> jax.Array:
@@ -216,9 +225,13 @@ class CubeRotationEnv(PipelineEnv):
         cube_orientation = jnp.linalg.norm(self._get_cube_orientation_err(data))
         goal_bonus = jnp.where(cube_orientation < 0.1, 250.0, 0.0)
 
+        position_penalty = jnp.maximum(
+            cube_position - self.config.position_threshold, 0.0
+        )
+
         total_reward = (
             -self.config.orientation_weight * cube_orientation
-            - self.config.position_weight * cube_position
+            - self.config.position_weight * position_penalty
             - self.config.grasp_weight * grasp_cost
             + goal_bonus
         )
