@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 import jax
 import jax.numpy as jnp
@@ -19,7 +19,7 @@ class CubeRotationConfig:
     model_path: Union[Path, str] = ROOT + "/envs/leap_hand/scene.xml"
 
     # number of simulation steps for every control input
-    physics_steps_per_control_step: int = 1
+    physics_steps_per_control_step: int = 8
 
     # Reset noise scales
     joint_position_noise_scale: float = 0.1
@@ -31,7 +31,7 @@ class CubeRotationConfig:
     # Cost weights
     grasp_weight: float = 0.001
     position_centering_weight: float = 0.1
-    position_barrier_weight: float = 100
+    position_barrier_weight: float = 5
     orientation_weight: float = 1.0
 
     # Distance (m) beyond which we impose a high cube position cost
@@ -107,7 +107,12 @@ class CubeRotationEnv(PipelineEnv):
         # Set other brax state fields (observation, reward, metrics, etc)
         obs = self._compute_obs(data, {})
         reward, done = jnp.zeros(2)
-        metrics = {"reward": reward}
+        metrics = {
+            "reward": reward,
+            "grasp_err": 0.0,
+            "cube_position_err": 0.0,
+            "cube_orientation_err": 0.0,
+        }
         info = {"rng": rng, "step": 0}  # TODO: include target in info
         return State(data, obs, reward, done, metrics, info)
 
@@ -124,16 +129,23 @@ class CubeRotationEnv(PipelineEnv):
         obs += jax.random.normal(rng_obs, obs.shape) * self.config.stdev_obs
 
         # Calculate the reward
-        reward = self._compute_reward(data, state.info)
+        reward, metrics = self._compute_reward(data, state.info)
 
         # Reset if the cube is dropped
-        # TODO
+        cube_z = data.qpos[18]
+        done = jnp.where(cube_z < -0.1, 1.0, 0.0)
+        reward -= done * 1000.0
 
         # Update the training state
         state.info["step"] += 1
         state.info["rng"] = rng
-        state.metrics["reward"] = reward
-        return state.replace(pipeline_state=data, obs=obs, reward=reward)
+        return state.replace(
+            pipeline_state=data,
+            obs=obs,
+            reward=reward,
+            done=done,
+            metrics=metrics,
+        )
 
     def _get_cube_position_err(self, data: mjx.Data) -> jax.Array:
         """Position of the cube relative to the target grasp position."""
@@ -167,7 +179,7 @@ class CubeRotationEnv(PipelineEnv):
 
     def _compute_reward(
         self, data: mjx.Data, info: Dict[str, Any]
-    ) -> jnp.ndarray:
+    ) -> Tuple[jnp.ndarray, Dict[str, float]]:
         """Compute the reward from the simulator state."""
         # Distance from a nominal grasp position
         grasp_cost = jnp.sum(jnp.square(data.ctrl))  # ctrl = target position
@@ -191,4 +203,12 @@ class CubeRotationEnv(PipelineEnv):
             - self.config.position_barrier_weight * cube_position_cost
             - self.config.orientation_weight * cube_orientation_cost
         )
-        return total_reward
+
+        metrics = {
+            "reward": total_reward,
+            "grasp_err": jnp.sqrt(grasp_cost),
+            "cube_position_err": jnp.sqrt(cube_squared_dist),
+            "cube_orientation_err": jnp.sqrt(cube_orientation_cost),
+        }
+
+        return total_reward, metrics

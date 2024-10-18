@@ -30,7 +30,7 @@ def train():
         policy_network=MLP(
             layer_sizes=(64, 64, 32)
         ),  # action + log probability
-        value_network=MLP(layer_sizes=(128, 128, 1)),
+        value_network=MLP(layer_sizes=(128, 128, 128, 1)),
         action_distribution=NormalTanhDistribution,
     )
 
@@ -39,10 +39,10 @@ def train():
         env=CubeRotationEnv,
         network_wrapper=network_wrapper,
         save_path="/tmp/leap_ppo.pkl",
-        num_timesteps=10_000_000,
-        num_evals=10,
+        num_timesteps=50_000_000,
+        num_evals=50,
         reward_scaling=0.1,
-        episode_length=200,
+        episode_length=50,
         normalize_observations=True,
         action_repeat=1,
         unroll_length=10,
@@ -50,7 +50,7 @@ def train():
         num_updates_per_batch=8,
         discounting=0.97,
         learning_rate=1e-3,
-        entropy_cost=0,
+        entropy_cost=1e-3,
         num_envs=1024,
         batch_size=512,
         seed=0,
@@ -79,7 +79,7 @@ def test():
     policy = make_policy_function(
         network_wrapper=network_wrapper,
         params=params,
-        observation_size=32,
+        observation_size=38,
         action_size=16,
         normalize_observations=True,
     )
