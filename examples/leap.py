@@ -28,9 +28,9 @@ def train():
     # Create policy and value functions
     network_wrapper = BraxPPONetworksWrapper(
         policy_network=MLP(
-            layer_sizes=(64, 64, 32)
+            layer_sizes=(128, 128, 32)
         ),  # action + log probability
-        value_network=MLP(layer_sizes=(128, 128, 128, 1)),
+        value_network=MLP(layer_sizes=(256, 256, 256, 1)),
         action_distribution=NormalTanhDistribution,
     )
 
@@ -39,18 +39,18 @@ def train():
         env=CubeRotationEnv,
         network_wrapper=network_wrapper,
         save_path="/tmp/leap_ppo.pkl",
-        num_timesteps=50_000_000,
+        num_timesteps=200_000_000,
         num_evals=50,
         reward_scaling=0.1,
-        episode_length=50,
+        episode_length=100,
         normalize_observations=True,
         action_repeat=1,
         unroll_length=10,
         num_minibatches=32,
         num_updates_per_batch=8,
         discounting=0.97,
-        learning_rate=1e-3,
-        entropy_cost=1e-3,
+        learning_rate=3e-4,
+        entropy_cost=5e-3,
         num_envs=1024,
         batch_size=512,
         seed=0,
@@ -82,6 +82,7 @@ def test():
         observation_size=44,
         action_size=16,
         normalize_observations=True,
+        deterministic=True,
     )
     jit_policy = jax.jit(policy)
     jit_obs = jax.jit(env._compute_obs)

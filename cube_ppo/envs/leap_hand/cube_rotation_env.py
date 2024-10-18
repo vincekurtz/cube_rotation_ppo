@@ -22,7 +22,7 @@ class CubeRotationConfig:
     physics_steps_per_control_step: int = 8
 
     # Reset noise scales
-    joint_position_noise_scale: float = 0.1
+    joint_position_noise_scale: float = 0.5
     joint_velocity_noise_scale: float = 0.1
 
     # Observation noise scales
@@ -30,12 +30,8 @@ class CubeRotationConfig:
 
     # Cost weights
     grasp_weight: float = 0.001
-    position_centering_weight: float = 0.1
-    position_barrier_weight: float = 5
-    orientation_weight: float = 1.0
-
-    # Distance (m) beyond which we impose a high cube position cost
-    position_radius = 0.015
+    position_weight: float = 1.0
+    orientation_weight: float = 10.0
 
 
 class CubeRotationEnv(PipelineEnv):
@@ -119,9 +115,10 @@ class CubeRotationEnv(PipelineEnv):
         reward, done = jnp.zeros(2)
         metrics = {
             "reward": reward,
-            "grasp_err": 0.0,
-            "cube_position_err": 0.0,
-            "cube_orientation_err": 0.0,
+            "grasp_cost": 0.0,
+            "position_err": 0.0,
+            "orientation_err": 0.0,
+            "goal_reached": 0.0,
         }
         info = {"rng": rng, "step": 0}  # TODO: include target in info
         return State(data, obs, reward, done, metrics, info)
@@ -215,31 +212,23 @@ class CubeRotationEnv(PipelineEnv):
         # Distance from a nominal grasp position
         grasp_cost = jnp.sum(jnp.square(data.ctrl))  # ctrl = target position
 
-        # Cube position penalties
-        cube_squared_dist = jnp.sum(
-            jnp.square(self._get_cube_position_err(data))
-        )
-        cube_position_cost = jnp.maximum(
-            cube_squared_dist - self.config.position_radius**2, 0
-        )
-
-        # Cube orientation cost
-        cube_orientation_cost = jnp.sum(
-            jnp.square(self._get_cube_orientation_err(data))
-        )
+        cube_position = jnp.linalg.norm(self._get_cube_position_err(data))
+        cube_orientation = jnp.linalg.norm(self._get_cube_orientation_err(data))
+        goal_bonus = jnp.where(cube_orientation < 0.1, 250.0, 0.0)
 
         total_reward = (
-            -self.config.grasp_weight * grasp_cost
-            - self.config.position_centering_weight * cube_squared_dist
-            - self.config.position_barrier_weight * cube_position_cost
-            - self.config.orientation_weight * cube_orientation_cost
+            -self.config.orientation_weight * cube_orientation
+            - self.config.position_weight * cube_position
+            - self.config.grasp_weight * grasp_cost
+            + goal_bonus
         )
 
         metrics = {
             "reward": total_reward,
-            "grasp_err": jnp.sqrt(grasp_cost),
-            "cube_position_err": jnp.sqrt(cube_squared_dist),
-            "cube_orientation_err": jnp.sqrt(cube_orientation_cost),
+            "grasp_cost": grasp_cost,
+            "position_err": cube_position,
+            "orientation_err": cube_orientation,
+            "goal_reached": jnp.float32(cube_orientation < 0.1),
         }
 
         return total_reward, metrics
